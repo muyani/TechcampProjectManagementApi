@@ -15,6 +15,7 @@ class Projects(Resource):
                 endDate = body['endDate']
                 cost = body['cost']
                 status = body['status']
+                userId = body['userId']
                 startDate = datetime.strptime(startDate,dateformat)
                 endDate = datetime.strptime(endDate,dateformat)
             except Exception as e:
@@ -24,7 +25,7 @@ class Projects(Resource):
                 return {"Message":"Title {} already exists".format(title)},409
 
             project = ProjectsModel(title=title, description=description, startDate=startDate,
-                                   endDate=endDate, cost=cost, status=status)
+                                   endDate=endDate, cost=cost, status=status,userId=userId)
             project.create_record()
             return {"Message":"{} created Successfully".format(title)},201
         else:
@@ -66,12 +67,13 @@ class Project(Resource):
                 endDate = body['endDate']
                 cost = body['cost']
                 status = body['status']
+                userId = body['userId']
             except Exception as e:
                 return {"Message":"One or more of the fields are empty" },400
 
             updated = ProjectsModel.update_by_id(id=id, newTitle=title, newDescription=description,
                                                  newStartDate=startDate, newEndDate=endDate, newCost=cost,
-                                                 newStatus=status)
+                                                 newStatus=status,newUserId=userId)
             if updated:
                 return {"Message":"{} updated Successfully".format(title)},200
             else:

@@ -3,34 +3,24 @@ from main import db
 class ProjectsModel(db.Model):
     __tablename__ = 'projects'
     id = db.Column(db.Integer,primary_key=True)
-    title = db.Column(db.String(120),nullable=False,unique=True)
+    title = db.Column(db.String(),nullable=False,unique=True)
     description = db.Column(db.String(),nullable=True)
     startDate = db.Column(db.DateTime,nullable=False)
     endDate = db.Column(db.DateTime,nullable=False)
     cost = db.Column(db.Float,nullable=False)
     status = db.Column(db.String(30))
-    userId =  db.Column(db.Integer,db.ForeignKey('users.id'))
+    userId = db.Column(db.Integer,db.ForeignKey('users.id'))
 
     # CREATE
     def create_record(self):
         db.session.add(self)
         db.session.commit()
+        return self
 
     # READ
     @classmethod
     def fetch_all(cls):
-        def to_json(x):
-            return {
-                'id': x.id,
-                'title': x.title,
-                'description': x.description,
-                'startDate': str(x.startDate),
-                'endDate': str(x.endDate),
-                'cost': x.cost,
-                'status': x.status,
-                'user': x.user.username
-            }
-        return {'projects': list(map(lambda x: to_json(x), cls.query.all()))}
+        return cls.query.all()
 
     @classmethod
     def fetch_by_title(cls,title):
@@ -42,7 +32,7 @@ class ProjectsModel(db.Model):
 
     #UPDATE
     @classmethod
-    def update_by_id(cls,id,newTitle,newDescription,newStartDate,newEndDate,newCost,newStatus,newUserId):
+    def update_by_id(cls,id,newTitle,newDescription,newStartDate,newEndDate,newCost,newStatus):
         record = ProjectsModel.query.filter_by(id=id).first()
         if record:
             record.title = newTitle
@@ -51,7 +41,6 @@ class ProjectsModel(db.Model):
             record.endDate = newEndDate
             record.cost = newCost
             record.status = newStatus
-            record.userId = newUserId
             db.session.commit()
             return True
         else:
@@ -69,14 +58,15 @@ class ProjectsModel(db.Model):
             return False
 
     @classmethod
-    def delete_all(cls):
+    def delete_all(cls,id):
         try:
-            num_rows_deleted = db.session.query(cls).delete()
-            db.session.commit()
-            return {'message': '{} row(s) deleted'.format(num_rows_deleted)}
+            records = cls.query.filter_by(userId = id)
+            if records.all():
+                records.delete()
+                db.session.commit()
+            return True
         except:
-            return {'message': 'Something went wrong'},500
-
+            return False
 
 class UsersModel(db.Model):
     __tablename__ = 'users'
@@ -88,32 +78,12 @@ class UsersModel(db.Model):
     def create_record(self):
         db.session.add(self)
         db.session.commit()
+        return self
 
     # READ
     @classmethod
     def fetch_all(cls):
-        def to_json(x):
-            return {
-                'id': x.id,
-                'username': x.username
-            }
-        return {'projects': list(map(lambda x: to_json(x), cls.query.all()))}
-
-    @classmethod
-    def fetch_projects_by_id(cls,id):
-        record = cls.query.filter_by(id=id).first()
-        def to_json(x):
-            return {
-                'id': x.id,
-                'title': x.title,
-                'description': x.description,
-                'startDate': str(x.startDate),
-                'endDate': str(x.endDate),
-                'cost': x.cost,
-                'status': x.status,
-                'user': x.user.username
-            }
-        return {'projects': list(map(lambda x: to_json(x), record.projects))}
+        return cls.query.all()
 
     @classmethod
     def fetch_by_id(cls,id):
@@ -126,7 +96,7 @@ class UsersModel(db.Model):
     #UPDATE
     @classmethod
     def update_by_id(cls,id,newUsername):
-        record = ProjectsModel.query.filter_by(id=id).first()
+        record = cls.query.filter_by(id=id).first()
         if record:
             record.username = newUsername
             db.session.commit()

@@ -1,4 +1,4 @@
-from flask import Flask,request
+from flask import Flask,request,make_response,jsonify
 from flask_sqlalchemy import SQLAlchemy
 from flask_restplus import Api, Resource, reqparse, fields, marshal
 from datetime import datetime
@@ -18,8 +18,24 @@ api = Api(app)
 
 ns = api.namespace('api/v1',description='Techcamp Project Management System operations.')
 
-# Request parsing
 
+@app.errorhandler(400)
+def badRequest(e):
+    return make_response(jsonify({'error': 'Bad Request'}), 400)
+
+@app.errorhandler(404)
+def notFound(e):
+    return make_response(jsonify({'error': 'Resource not found'}), 404)
+
+@app.errorhandler(405)
+def notAllowed(error):
+    return make_response(jsonify({'error': 'Method not allowed'}), 405)
+
+@app.errorhandler(500)
+def internalServer(e):
+    return make_response(jsonify({'error': 'Internal Server Error'}), 500)
+
+# Request parsing
 
 userParser = reqparse.RequestParser()
 userParser.add_argument('username', type=str, help='Username ',required= True)
@@ -118,8 +134,9 @@ class Users(Resource):
     def post(self):
         args = userParser.parse_args()
         username = args['username']
-        if UsersModel.fetch_by_username(username):
-            return {"Message":"Username {} is already taken".format(username)},409
+        user = UsersModel.fetch_by_username(username)
+        if user:
+            return marshal(user, userStructure), 200
         user = UsersModel(username=username)
         record = user.create_record()
         return marshal(record,userStructure),201

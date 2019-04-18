@@ -46,9 +46,9 @@ projectParser.add_argument('description', type=str, help='Description of the tas
 
 
 projectUpdateParser = reqparse.RequestParser()
-projectUpdateParser.add_argument('title', type=str, help='Title of the task',required= True)
-projectUpdateParser.add_argument('description', type=str, help='Description of the task',required= True)
-projectUpdateParser.add_argument('status', type=int, help='0 if todo,1 if ongoing,2 if complete',required= True)
+projectUpdateParser.add_argument('title', type=str, help='Title of the task',required= False)
+projectUpdateParser.add_argument('description', type=str, help='Description of the task',required= False)
+projectUpdateParser.add_argument('status', type=int, help='0 if todo,1 if ongoing,2 if complete',required= False)
 
 
 # Response marshalling
@@ -157,9 +157,9 @@ class Project(Resource):
         for each in record:
             if each.id == pid:
                 body = projectUpdateParser.parse_args()
-                title = body['title']
-                description = body['description']
-                status = int(body['status'])
+                title = body['title'] if body['title'] else None
+                description = body['description'] if body['description'] else None
+                status = int(body['status']) if body['status'] else None
                 startDate = None
                 endDate = None
                 if status == 1:

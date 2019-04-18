@@ -33,14 +33,14 @@ class ProjectsModel(db.Model):
 
     #UPDATE
     @classmethod
-    def update_by_id(cls,id,newTitle,newDescription,newStartDate,newEndDate,newStatus):
+    def update_by_id(cls,id,newTitle=None,newDescription=None,newStartDate=None,newEndDate=None,newStatus=None):
         record = ProjectsModel.query.filter_by(id=id).first()
         if record:
-            record.title = newTitle
-            record.description = newDescription
-            record.startDate = newStartDate
-            record.endDate = newEndDate
-            record.status = newStatus
+            record.title = newTitle if newTitle else record.title
+            record.description = newDescription if newDescription else record.description
+            record.startDate = newStartDate if newStartDate else record.startDate
+            record.endDate = newEndDate if newEndDate else record.endDate
+            record.status = newStatus if newStatus else record.status
             db.session.commit()
             return True
         else:

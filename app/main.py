@@ -16,7 +16,7 @@ from models import ProjectsModel,UsersModel
 
 api = Api(app)
 
-ns = api.namespace('api/v1',description='Techcamp Project Management System operations.')
+ns = api.namespace('api/v1',description='Techcamp Task Management System operations.')
 
 
 @app.errorhandler(400)
@@ -41,29 +41,31 @@ userParser = reqparse.RequestParser()
 userParser.add_argument('username', type=str, help='Username ',required= True)
 
 projectParser = reqparse.RequestParser()
-projectParser.add_argument('title', type=str, help='Title of the project',required= True)
-projectParser.add_argument('description', type=str, help='Description of the project',required= True)
-projectParser.add_argument('startDate', type=str, help='The date format = 2018-04-31',required= True)
-projectParser.add_argument('endDate', type=str, help='The date the project ended',required= True)
-projectParser.add_argument('cost', type=str, help='The cost of the project',required= True)
-projectParser.add_argument('status', type=str, help='Is the project complete,pending,canceled?',required= True)
+projectParser.add_argument('title', type=str, help='Title of the task',required= True)
+projectParser.add_argument('description', type=str, help='Description of the task',required= True)
+
+
+projectUpdateParser = reqparse.RequestParser()
+projectUpdateParser.add_argument('title', type=str, help='Title of the task',required= True)
+projectUpdateParser.add_argument('description', type=str, help='Description of the task',required= True)
+projectUpdateParser.add_argument('status', type=int, help='0 if todo,1 if ongoing,2 if complete',required= True)
+
 
 # Response marshalling
 project = api.model('Project', {
     'id': fields.Integer,
     'title': fields.String,
     'description': fields.String,
-    'startDate': fields.Date,
-    'endDate': fields.Date,
-    'cost': fields.Float,
-    'status': fields.String
+    'createdDate': fields.DateTime,
+    'startDate': fields.DateTime,
+    'endDate': fields.DateTime,
+    'status': fields.Integer
 })
 
 userStructure = api.model('user',{
     'id':fields.String,
     'username':fields.String
 })
-
 
 @app.before_first_request
 def create_tables():
@@ -72,7 +74,7 @@ def create_tables():
 def conflict(title):
     return {'Record {} already exists'.format(title)},409
 
-@ns.route('/projects/<int:uid>')
+@ns.route('/tasks/<int:uid>')
 @ns.response(200, 'Success')
 @ns.response(201, 'Record Created Successfuly')
 @ns.response(204, 'Record Deleted Successfuly')
@@ -88,31 +90,26 @@ class Projects(Resource):
         dateformat = '%Y-%m-%d'
         title = args['title']
         description = args['description']
-        startDate = args['startDate']
-        endDate = args['endDate']
-        cost = args['cost']
-        status = args['status']
+        status = 0
         userId = uid
-        startDate = datetime.strptime(startDate,dateformat)
-        endDate = datetime.strptime(endDate,dateformat)
+        if UsersModel.fetch_by_id(uid) == None:
+            return {"message":"User not found"},404
         if ProjectsModel.fetch_by_title(title):
             return 'project "{}" already exist'.format(title),409
-        project = ProjectsModel(title=title, description=description, startDate=startDate,
-                               endDate=endDate, cost=cost, status=status,userId=userId)
+        project = ProjectsModel(title=title, description=description,status=status,userId=userId)
         record = project.create_record()
         print(record)
         return record, 201
 
-    @ns.marshal_with(project)
     def get(self,uid):
         user = UsersModel.fetch_by_id(uid)
         try:
             record = user.projects
             if record:
-                return record, 200
+                return marshal(record,project), 200
             return {}, 404
         except:
-            return {"Message":"User does not exist"},500
+            return {"Message":"User does not exist"},404
 
     def delete(self,uid):
         deleted = ProjectsModel.delete_all(uid)
@@ -120,6 +117,7 @@ class Projects(Resource):
             return {'Message':'Records Deleted Successfully'},204
         else:
             return {'Message':'Something is wrong with the server'},500
+
 
 @ns.route('/users')
 @ns.response(200, 'Success')
@@ -134,6 +132,7 @@ class Users(Resource):
     def post(self):
         args = userParser.parse_args()
         username = args['username']
+        username = username.lower()
         user = UsersModel.fetch_by_username(username)
         if user:
             return marshal(user, userStructure), 200
@@ -141,7 +140,7 @@ class Users(Resource):
         record = user.create_record()
         return marshal(record,userStructure),201
 
-@ns.route('/projects/<int:uid>/<int:pid>')
+@ns.route('/tasks/<int:uid>/<int:pid>')
 @ns.response(200, 'Success')
 @ns.response(201, 'Record Created Successfuly')
 @ns.response(204, 'Record Deleted Successfuly')
@@ -150,28 +149,33 @@ class Users(Resource):
 @ns.response(409, 'Record Already exists')
 @ns.response(500, 'Server Error')
 class Project(Resource):
-    @ns.expect(projectParser)
+    @ns.expect(projectUpdateParser)
     @ns.marshal_with(project)
     def put(self,uid,pid):
         user = UsersModel.fetch_by_id(uid)
         record = user.projects
         for each in record:
             if each.id == pid:
-                body = projectParser.parse_args()
+                body = projectUpdateParser.parse_args()
                 title = body['title']
                 description = body['description']
-                startDate = body['startDate']
-                endDate = body['endDate']
-                cost = body['cost']
-                status = body['status']
+                status = int(body['status'])
+                startDate = None
+                endDate = None
+                if status == 1:
+                    startDate = datetime.now()
+                elif status == 2:
+                    endDate = datetime.now()
                 updated = ProjectsModel.update_by_id(id=pid, newTitle=title, newDescription=description,
-                                                     newStartDate=startDate, newEndDate=endDate, newCost=cost,
+                                                     newStartDate=startDate, newEndDate=endDate,
                                                      newStatus=status)
+
                 if updated:
                     record = ProjectsModel.fetch_by_id(pid)
                     return record,200
                 else:
                     return {},400
+
         return {},404
 
     def get(self,uid,pid):
@@ -185,7 +189,6 @@ class Project(Resource):
         except:
             return {"Message":"User not found"},500
 
-
     def delete(self,uid,pid):
         user = UsersModel.fetch_by_id(uid)
         record = user.projects
@@ -193,7 +196,7 @@ class Project(Resource):
             if each.id == pid:
                 deleted = ProjectsModel.delete_by_id(pid)
                 if deleted:
-                    return {"Message": "Project deleted Successfully"}, 204
+                    return {"Message": "Task deleted Successfully"}, 204
                 return {"Message":"something went wrong"},500
         return {"Message":"Record not found"},404
 
@@ -207,14 +210,15 @@ class Project(Resource):
 @ns.response(500, 'Server Error')
 class User(Resource):
     @ns.expect(userParser)
-    @ns.marshal_with(userStructure)
     def put(self,uid):
         args = userParser.parse_args()
-        username = args['username']
+        username = args['username'].lower()
+        if UsersModel.fetch_by_username(username):
+            return {"message":"Username {} already exists".format(username)},409
         updated = UsersModel.update_by_id(id=uid, newUsername=username)
         if updated:
             record = UsersModel.fetch_by_id(uid)
-            return record,200
+            return marshal(record,userStructure),200
         else:
             return {"Message":"Record not updated"},500
 
@@ -228,15 +232,9 @@ class User(Resource):
 @ns.route('/')
 class Homepage(Resource):
     def get(self):
-        return {"Message":"Welcome to Techcamp Project Management Api"},200
+        return {"Message":"Welcome to Techcamp Task Management Api"},200
     def post(self):
-        return {"Message": "Welcome to Techcamp Project Management Api"},200
-
-
-
-
-
-
+        return {"Message": "Welcome to Techcamp Task Management Api"},200
 
 
 

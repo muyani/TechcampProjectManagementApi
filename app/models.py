@@ -1,14 +1,15 @@
 from main import db
+from datetime import datetime
 
 class ProjectsModel(db.Model):
     __tablename__ = 'projects'
     id = db.Column(db.Integer,primary_key=True)
     title = db.Column(db.String(),nullable=False,unique=True)
     description = db.Column(db.String(),nullable=True)
-    startDate = db.Column(db.DateTime,nullable=False)
-    endDate = db.Column(db.DateTime,nullable=False)
-    cost = db.Column(db.Float,nullable=False)
-    status = db.Column(db.String(30))
+    createdDate = db.Column(db.DateTime,nullable=False,default = datetime.now)
+    startDate = db.Column(db.DateTime,nullable=True)
+    endDate = db.Column(db.DateTime,nullable=True)
+    status = db.Column(db.Integer)
     userId = db.Column(db.Integer,db.ForeignKey('users.id'))
 
     # CREATE
@@ -32,14 +33,13 @@ class ProjectsModel(db.Model):
 
     #UPDATE
     @classmethod
-    def update_by_id(cls,id,newTitle,newDescription,newStartDate,newEndDate,newCost,newStatus):
+    def update_by_id(cls,id,newTitle,newDescription,newStartDate,newEndDate,newStatus):
         record = ProjectsModel.query.filter_by(id=id).first()
         if record:
             record.title = newTitle
             record.description = newDescription
             record.startDate = newStartDate
             record.endDate = newEndDate
-            record.cost = newCost
             record.status = newStatus
             db.session.commit()
             return True

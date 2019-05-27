@@ -6,9 +6,7 @@ from flask_cors import CORS
 
 app = Flask(__name__)
 CORS(app)
-app.config['SQLALCHEMY_DATABASE_URI'] = 'postgresql://postgres:123@172.17.0.1:5432/techcamp_projectmanager'
-app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
-app.config['SECRET_KEY'] = 's0meSecretKey'
+
 
 app.config['RESTPLUS_VALIDATE'] = True
 db = SQLAlchemy(app=app)
